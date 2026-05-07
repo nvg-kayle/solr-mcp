@@ -48,7 +48,7 @@ jobs:
           retention-days: 7
 
   # ============================================================================
-  # Job 2: Build Docker Image Artifact (No Publishing)
+  # Job 2: Build Docker Image Artifact (Intel Mac Compatible)
   # ============================================================================
   build-docker-artifact:
     name: Build Docker Artifact
@@ -65,8 +65,6 @@ jobs:
         id: meta
         run: |
           VERSION=$(grep '^version = ' build.gradle.kts | sed 's/version = "\(.*\)"/\1/')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG_NAME=${GITHUB_REF#refs/tags/v}
             echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
@@ -77,9 +75,10 @@ jobs:
 
       - name: Build Docker Image Tarball
         run: |
-          # jibBuildTar creates a local .tar file; -x test ensures Jib doesn't run tests
+          # Use linux/amd64 for Intel Macs
           ./gradlew jibBuildTar -x test \
-            -Djib.to.image=solr-mcp:${{ steps.meta.outputs.tag }}
+            -Djib.to.image=solr-mcp:${{ steps.meta.outputs.tag }} \
+            -Djib.from.platforms=linux/amd64
 
       - name: Upload Docker Artifact
         uses: actions/upload-artifact@v4
@@ -92,9 +91,13 @@ jobs:
         run: |
           echo "### Docker Image Built :package:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The Docker image has been saved as a workflow artifact." >> $GITHUB_STEP_SUMMARY
+          echo "The Docker image for Intel (amd64) has been saved as a workflow artifact." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "#### Local Usage:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Download and unzip \`solr-mcp-docker-image\`." >> $GITHUB_STEP_SUMMARY
-          echo "2. \`docker load < jib-image.tar\`" >> $GITHUB_STEP_SUMMARY
-          echo "3. \`docker run -p 8080:8080 solr-mcp:${{ steps.meta.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "#### Instructions for your Intel Mac:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the \`solr-mcp-docker-image\` artifact." >> $GITHUB_STEP_SUMMARY
+          echo "2. Unzip the file." >> $GITHUB_STEP_SUMMARY
+          echo "3. Open Terminal in that folder and run:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   docker load < jib-image.tar" >> $GITHUB_STEP_SUMMARY
+          echo "   docker run -p 8080:8080 solr-mcp:${{ steps.meta.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
